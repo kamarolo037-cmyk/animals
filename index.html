@@ -1387,4 +1387,25 @@ function showToast(msg) {
 })();
 </script>
 </body>
+  <!-- Мобильная консоль разработки Eruda -->
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>
+  // Проверяем: если мы на localhost ИЛИ в адресной строке есть ?debug=1
+  if (
+    window.location.hostname === 'localhost' || 
+    window.location.hostname === '127.0.0.1' || 
+    window.location.search.includes('debug=1')
+  ) {
+    // Инициализируем консоль
+    eruda.init({
+      theme: 'dark', // Темная тема, чтобы не выжигало глаза
+      defaults: {
+        displaySize: 45 // Размер панели в процентах от экрана
+      }
+    });
+    
+    // По желанию: автоматически открывать её при загрузке
+    // eruda.show(); 
+  }
+</script>
 </html>
