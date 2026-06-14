@@ -244,7 +244,6 @@
 </head>
 <body>
 
-<!-- SELECT SCREEN -->
 <div id="screen-select" class="screen active">
   <h1>Выбери питомца 🐾</h1>
   <p>Твой маленький друг ждёт тебя!</p>
@@ -259,6 +258,11 @@
       <h3>Кошечка</h3>
       <p>Ласковая и умная</p>
     </div>
+    <div class="pet-card" data-type="bunny" onclick="selectPet('bunny',this)">
+      <canvas id="preview-bunny" width="100" height="100"></canvas>
+      <h3>Кролик</h3>
+      <p>Мягкий и прыгучий</p>
+    </div>
   </div>
   <div class="name-input-wrap">
     <label>Дай имя питомцу</label>
@@ -267,7 +271,6 @@
   <button class="btn-start" id="btn-start" disabled onclick="startGame()">Начать! 🐾</button>
 </div>
 
-<!-- MAIN SCREEN -->
 <div id="screen-main" class="screen">
   <div class="top-bar">
     <div>
@@ -312,7 +315,6 @@
   </div>
 </div>
 
-<!-- SHOP SCREEN -->
 <div id="screen-shop" class="screen">
   <div class="page-header">
     <button class="back-btn" onclick="switchTab('main',document.querySelector('.tab-btn'))">←</button>
@@ -329,7 +331,6 @@
   </div>
 </div>
 
-<!-- STATS SCREEN -->
 <div id="screen-stats" class="screen">
   <div class="page-header">
     <button class="back-btn" onclick="switchTab('main',document.querySelector('.tab-btn'))">←</button>
@@ -386,7 +387,7 @@ const ACHIEVEMENTS = [
   {id:'playful',     name:'Игрун',               emoji:'🎾', desc:'Поиграй 30 раз',          check:s=>s.playCount>=30},
   {id:'level10',     name:'Уровень 10',          emoji:'🌟', desc:'Достигни уровня 10',      check:s=>s.level>=10},
   {id:'collector',   name:'Коллекционер',        emoji:'👑', desc:'Купи 5 предметов',        check:s=>s.ownedItems.length>=5},
-  {id:'loyal',       name:'Верный друг',          emoji:'💖', desc:'1000 действий',           check:s=>s.totalActions>=1000},
+  {id:'loyal',       name:'Верный friend',       emoji:'💖', desc:'1000 действий',           check:s=>s.totalActions>=1000},
 ];
 
 let state = {
@@ -434,6 +435,12 @@ const PET_COLORS = {
     noseHex:'#E0729A', eyeHex:'#1a1a2e', tongueHex:'#E8768A',
     body:0xC8C8D0, ear:0xA0A0B0, belly:0xE8E8EE,
     nose:0xE0729A, eye:0x1a1a2e, tongue:0xE8768A
+  },
+  bunny: {
+    bodyHex:'#F1ECE9', earHex:'#E3A8A8', bellyHex:'#FFFFFF',
+    noseHex:'#F472B6', eyeHex:'#1a1a2e', tongueHex:'#E8768A',
+    body:0xF1ECE9, ear:0xE3A8A8, belly:0xFFFFFF,
+    nose:0xF472B6, eye:0x1a1a2e, tongue:0xE8768A
   }
 };
 
@@ -625,8 +632,10 @@ class PetRenderer {
     this.parts = {};
     const c = PET_COLORS[this.type];
     if (this.type==='dog') this.buildDog(c);
-    else this.buildCat(c);
+    else if (this.type==='cat') this.buildCat(c);
+    else if (this.type==='bunny') this.buildBunny(c);
     this.buildEyes(c);
+    this.addAccessories();
     this.group.position.y = -0.2;
   }
 
@@ -701,9 +710,9 @@ class PetRenderer {
 
   buildDogLeg(c) {
     const g = new THREE.Group();
-    const upper = this.furCyl(0.14,0.15,0.32,'dog_body',c.bodyHex,c.earHex);
+    const upper = this.furCyl(0.14,0.15,0.32,this.type+'_body',c.bodyHex,c.earHex);
     upper.position.y=-0.08; g.add(upper);
-    const paw = this.furSphere(0.16,'dog_ear',c.earHex,c.bodyHex, 1,0.65,1);
+    const paw = this.furSphere(0.16,this.type+'_ear',c.earHex,c.bodyHex, 1,0.65,1);
     paw.position.y=-0.28; g.add(paw);
     return g;
   }
@@ -800,10 +809,118 @@ class PetRenderer {
     return g;
   }
 
+  buildBunny(c) {
+    const p = this.parts;
+    const bk = 'bunny_body', ek = 'bunny_ear', blk = 'bunny_belly';
+
+    // Body
+    p.body = this.furSphere(0.55, bk, c.bodyHex, c.earHex, 1, 0.9, 0.9);
+    this.group.add(p.body);
+
+    const belly = this.furSphere(0.32, blk, c.bellyHex, c.bodyHex, 1, 0.8, 0.7);
+    belly.position.set(0, -0.05, 0.3);
+    this.group.add(belly);
+
+    // Head
+    p.head = new THREE.Group();
+    p.head.add(this.furSphere(0.4, bk, c.bodyHex, c.earHex, 1.05, 1, 1));
+    p.head.position.set(0, 0.76, 0.05);
+    this.group.add(p.head);
+
+    // Snout
+    const snout = this.furSphere(0.15, blk, c.bellyHex, c.bodyHex, 1.3, 0.8, 0.8);
+    snout.position.set(0, -0.08, 0.32);
+    p.head.add(snout);
+
+    const nose = this.smoothSphere(0.05, c.noseHex);
+    nose.position.set(0, 0.02, 0.16);
+    snout.add(nose);
+
+    // Long ears
+    p.earL = new THREE.Group();
+    p.earL.add(this.furSphere(0.12, ek, c.bodyHex, c.earHex, 0.6, 2.6, 0.4));
+    p.earL.position.set(-0.16, 0.35, -0.05);
+    p.earL.rotation.z = 0.08;
+    p.head.add(p.earL);
+
+    p.earR = new THREE.Group();
+    p.earR.add(this.furSphere(0.12, ek, c.bodyHex, c.earHex, 0.6, 2.6, 0.4));
+    p.earR.position.set(0.16, 0.35, -0.05);
+    p.earR.rotation.z = -0.08;
+    p.head.add(p.earR);
+
+    // Legs
+    const ly = -0.52, lx = 0.25;
+    p.legFL = this.buildDogLeg(c); p.legFL.position.set(-lx, ly, 0.22); this.group.add(p.legFL);
+    p.legFR = this.buildDogLeg(c); p.legFR.position.set( lx, ly, 0.22); this.group.add(p.legFR);
+    p.legBL = this.buildDogLeg(c); p.legBL.position.set(-lx, ly, -0.22); this.group.add(p.legBL);
+    p.legBR = this.buildDogLeg(c); p.legBR.position.set( lx, ly, -0.22); this.group.add(p.legBR);
+
+    // Pompon Tail
+    p.tail = this.furSphere(0.14, blk, c.bellyHex, '#ffffff');
+    p.tail.position.set(0, -0.1, -0.52);
+    this.group.add(p.tail);
+  }
+
+  addAccessories() {
+    if (this.mini || !state.equippedAcc) return;
+    const accId = state.equippedAcc;
+    const p = this.parts;
+    if (!p.head) return;
+
+    // 👑 Crown
+    if (accId === 'crown') {
+      const crown = new THREE.Group();
+      const gold = this.smoothMat(0xFBBF24, 0.2, 0.8);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.06, 16), gold);
+      crown.add(base);
+      
+      for(let i=0; i<5; i++) {
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.09, 4), gold);
+        const angle = (i / 5) * Math.PI * 2;
+        spike.position.set(Math.cos(angle)*0.14, 0.05, Math.sin(angle)*0.14);
+        spike.rotation.x = Math.sin(angle)*0.2;
+        spike.rotation.z = -Math.cos(angle)*0.2;
+        crown.add(spike);
+      }
+      crown.position.set(0, 0.42, -0.05);
+      p.head.add(crown);
+    }
+
+    // 🎀 Bow
+    if (accId === 'bow') {
+      const bow = new THREE.Group();
+      const pink = this.smoothMat(0xF472B6, 0.4);
+      const wingL = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.14, 4), pink);
+      wingL.rotation.z = Math.PI/2; wingL.position.x = -0.07;
+      const wingR = wingL.clone(); wingR.rotation.z = -Math.PI/2; wingR.position.x = 0.07;
+      const center = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), pink);
+      bow.add(wingL, wingR, center);
+      
+      if (this.type === 'cat') bow.position.set(-0.22, 0.28, 0.15);
+      else bow.position.set(0, -0.32, 0.35);
+      p.head.add(bow);
+    }
+
+    // 🕶️ Glasses
+    if (accId === 'glasses') {
+      const glasses = new THREE.Group();
+      const dark = this.smoothMat(0x1F2937, 0.1, 0.9);
+      const frameL = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.012, 4, 12), dark);
+      frameL.position.x = -0.15;
+      const frameR = frameL.clone(); frameR.position.x = 0.15;
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.015, 0.01), dark);
+      glasses.add(frameL, frameR, bridge);
+      
+      glasses.position.set(0, 0.08, 0.41);
+      p.head.add(glasses);
+    }
+  }
+
   buildEyes(c) {
     const p = this.parts;
-    const eyeX = this.type==='dog' ? 0.16 : 0.15;
-    const eyeY = 0.1, eyeZ = 0.38;
+    const eyeX = this.type==='dog' ? 0.16 : this.type==='cat' ? 0.15 : 0.14;
+    const eyeY = 0.1, eyeZ = this.type==='bunny'? 0.34 : 0.38;
 
     // Whites
     const ewL = this.smoothSphere(0.1, 0xFFFFFF, 1,1.15,0.5);
@@ -812,7 +929,7 @@ class PetRenderer {
     ewR.position.set(eyeX,eyeY,eyeZ); p.head.add(ewR);
 
     // Iris — coloured
-    const irisColor = this.type==='dog' ? 0x7B4F2E : 0x4CAF50;
+    const irisColor = this.type==='dog' ? 0x7B4F2E : this.type==='cat' ? 0x4CAF50 : 0xEF4444;
     const irisL = this.smoothSphere(0.072, irisColor, 1, this.type==='cat'?1.7:1.2, 0.55);
     irisL.position.set(-eyeX,eyeY,eyeZ+0.02); p.head.add(irisL);
     const irisR = this.smoothSphere(0.072, irisColor, 1, this.type==='cat'?1.7:1.2, 0.55);
@@ -835,7 +952,7 @@ class PetRenderer {
     const shR = shL.clone();
     shR.position.set(eyeX+0.028,eyeY+0.03,eyeZ+0.075); p.head.add(shR);
 
-    // Blink lids — same fur as head
+    // Blink lids
     const lidMat = this.furMat('lid_'+this.type, PET_COLORS[this.type].bodyHex, PET_COLORS[this.type].earHex, 0.3);
     p.lidL = this.mesh(new THREE.SphereGeometry(0.1,20,14), lidMat);
     p.lidL.scale.set(1,1.15,0.5); p.lidL.scale.y=0;
@@ -868,9 +985,14 @@ class PetRenderer {
       const breath = Math.sin(t*1.4)*0.028;
       p.body.scale.y = 0.88 + breath;
       p.body.scale.x = 1 - breath*0.3;
-      if (p.head) p.head.position.y = 0.82 + breath*0.6;
+      if (p.head) p.head.position.y = (this.type==='bunny'?0.76:0.82) + breath*0.6;
       // tail wag
-      if (p.tail) p.tail.rotation.z = Math.sin(t*3.5)*0.35;
+      if (p.tail && this.type!=='bunny') p.tail.rotation.z = Math.sin(t*3.5)*0.35;
+      // bunny ear bounce
+      if (p.earL && this.type === 'bunny') {
+        p.earL.rotation.x = Math.sin(t * 2) * 0.05;
+        p.earR.rotation.x = Math.sin(t * 2) * 0.05;
+      }
       // ear droop (dog)
       if (p.earL && this.type==='dog') {
         p.earL.rotation.z = 0.35 + Math.sin(t*1.2)*0.06;
@@ -884,10 +1006,10 @@ class PetRenderer {
     else if (a === 'feed') {
       const prog = this.animTime / this.animDuration;
       const bounce = Math.abs(Math.sin(prog*Math.PI*4)) * 0.18 * (1-prog);
-      if (p.head) p.head.position.y = 0.82 + bounce;
+      if (p.head) p.head.position.y = (this.type==='bunny'?0.76:0.82) + bounce;
       p.body.position.y = bounce*0.4;
       if (p.tongue) p.tongue.visible = true;
-      if (p.tail) p.tail.rotation.z = Math.sin(t*8)*0.6;
+      if (p.tail && this.type!=='bunny') p.tail.rotation.z = Math.sin(t*8)*0.6;
       if (done) { if (p.tongue) p.tongue.visible = (this.type==='dog'); this.playAnim('idle'); }
     }
 
@@ -897,7 +1019,7 @@ class PetRenderer {
       const jumpH = Math.sin(prog*Math.PI*3)*0.4 * (1-prog*0.5);
       this.group.position.y = -0.2 + jumpH;
       this.group.rotation.y += dt * 4;
-      if (p.tail) p.tail.rotation.z = Math.sin(t*10)*0.8;
+      if (p.tail && this.type!=='bunny') p.tail.rotation.z = Math.sin(t*10)*0.8;
       if (done) { this.group.position.y=-0.2; this.playAnim('idle'); }
     }
 
@@ -956,6 +1078,7 @@ class PetRenderer {
 let mainRenderer = null;
 let previewDog = null;
 let previewCat = null;
+let previewBunny = null;
 
 // ─────────────────────────────────────────────
 //  SELECT SCREEN
@@ -965,6 +1088,7 @@ let selectedType = null;
 function initPreviews() {
   previewDog = new PetRenderer(document.getElementById('preview-dog'), 'dog', true);
   previewCat = new PetRenderer(document.getElementById('preview-cat'), 'cat', true);
+  previewBunny = new PetRenderer(document.getElementById('preview-bunny'), 'bunny', true);
 }
 
 function selectPet(type, el) {
@@ -1205,6 +1329,7 @@ function buyItem(item) {
       showToast(`${item.emoji} Куплено!`);
     }
   }
+  if (mainRenderer) mainRenderer.buildPet();
   checkAchievements();
   save(); render(); renderShop();
 }
