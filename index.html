@@ -419,10 +419,10 @@ function load() {
 }
 
 // ─────────────────────────────────────────────
-//  THREE.JS PET RENDERER  — FUR EDITION
+//  THREE.JS PET RENDERER  — ULTIMATE FUR & LIVE TAIL EDITION
 // ─────────────────────────────────────────────
 
-// Palette
+// Палитра цветов
 const PET_COLORS = {
   dog: {
     bodyHex:'#E8B98A', earHex:'#C8854A', bellyHex:'#F5DFC0',
@@ -435,54 +435,47 @@ const PET_COLORS = {
     noseHex:'#E0729A', eyeHex:'#1a1a2e', tongueHex:'#E8768A',
     body:0xC8C8D0, ear:0xA0A0B0, belly:0xE8E8EE,
     nose:0xE0729A, eye:0x1a1a2e, tongue:0xE8768A
-  },
-  bunny: {
-    bodyHex:'#F1ECE9', earHex:'#E3A8A8', bellyHex:'#FFFFFF',
-    noseHex:'#F472B6', eyeHex:'#1a1a2e', tongueHex:'#E8768A',
-    body:0xF1ECE9, ear:0xE3A8A8, belly:0xFFFFFF,
-    nose:0xF472B6, eye:0x1a1a2e, tongue:0xE8768A
   }
 };
 
-// ── Procedural fur texture generator ──
-function makeFurTexture(baseHex, tipHex, size=256, strands=1800, isDark=false) {
+// ── Процедурный генератор ультра-густой шерсти ──
+function makeFurTexture(baseHex, tipHex, size=256, strands=3500) {
   const cv = document.createElement('canvas');
   cv.width = cv.height = size;
   const ctx = cv.getContext('2d');
 
-  // Base coat — solid fill
+  // Базовый подшерсток
   ctx.fillStyle = baseHex;
   ctx.fillRect(0,0,size,size);
 
-  // Draw individual fur strands
+  // Отрисовка тысяч тонких направленных ворсинок для мягкого эффекта
   for (let i=0; i<strands; i++) {
     const x  = Math.random()*size;
     const y  = Math.random()*size;
-    const len = 4 + Math.random()*10;
-    const angle = -Math.PI/2 + (Math.random()-0.5)*1.2;
+    const len = 3 + Math.random()*6; // Короткие ворсинки выглядят опрятнее
+    const angle = -Math.PI/2 + (Math.random()-0.5)*0.6; // Направление ворса вверх
     const dx = Math.cos(angle)*len;
     const dy = Math.sin(angle)*len;
 
-    // colour: slightly darker at root, tip colour at end
-    const alpha = 0.25 + Math.random()*0.55;
+    const alpha = 0.35 + Math.random()*0.5;
     const grad = ctx.createLinearGradient(x, y, x+dx, y+dy);
-    grad.addColorStop(0, baseHex + Math.round(alpha*160).toString(16).padStart(2,'0'));
+    grad.addColorStop(0, baseHex + Math.round(alpha*100).toString(16).padStart(2,'0'));
     grad.addColorStop(1, tipHex  + Math.round(alpha*220).toString(16).padStart(2,'0'));
 
     ctx.beginPath();
     ctx.moveTo(x, y);
-    ctx.lineTo(x+dx*0.5 + (Math.random()-0.5)*3, y+dy*0.5);
+    ctx.lineTo(x+dx*0.5, y+dy*0.5);
     ctx.lineTo(x+dx, y+dy);
     ctx.strokeStyle = grad;
-    ctx.lineWidth = 0.8 + Math.random()*1.0;
+    ctx.lineWidth = 0.4 + Math.random()*0.6; // Очень тонкие линии, чтобы не было "зернистости"
     ctx.stroke();
   }
 
-  // Subtle noise grain for texture depth
+  // Наложение мягкого микрошума для объема
   const imgData = ctx.getImageData(0,0,size,size);
   const d = imgData.data;
   for (let i=0;i<d.length;i+=4) {
-    const n = (Math.random()-0.5)*18;
+    const n = (Math.random()-0.5)*10;
     d[i]+=n; d[i+1]+=n; d[i+2]+=n;
   }
   ctx.putImageData(imgData,0,0);
@@ -492,25 +485,25 @@ function makeFurTexture(baseHex, tipHex, size=256, strands=1800, isDark=false) {
   return tex;
 }
 
-// ── Normal map from fur texture (emboss) ──
+// ── Карта нормалей для рельефа ворсинок ──
 function makeFurNormal(size=256) {
   const cv = document.createElement('canvas');
   cv.width = cv.height = size;
   const ctx = cv.getContext('2d');
-  ctx.fillStyle = '#8080ff'; // flat normal
+  ctx.fillStyle = '#8080ff'; 
   ctx.fillRect(0,0,size,size);
-  // draw bumpy strokes in normal-map space
-  for (let i=0; i<600; i++) {
+
+  for (let i=0; i<800; i++) {
     const x = Math.random()*size, y = Math.random()*size;
-    const len = 3+Math.random()*8;
-    const angle = -Math.PI/2+(Math.random()-0.5)*1.4;
+    const len = 2+Math.random()*6;
+    const angle = -Math.PI/2+(Math.random()-0.5)*1.2;
     ctx.beginPath();
     ctx.moveTo(x,y);
     ctx.lineTo(x+Math.cos(angle)*len, y+Math.sin(angle)*len);
-    const r = Math.floor(100+Math.random()*80);
-    const g = Math.floor(100+Math.random()*80);
+    const r = Math.floor(110+Math.random()*60);
+    const g = Math.floor(110+Math.random()*60);
     ctx.strokeStyle = `rgb(${r},${g},255)`;
-    ctx.lineWidth = 1+Math.random()*1.5;
+    ctx.lineWidth = 0.8+Math.random()*1.0;
     ctx.stroke();
   }
   const tex = new THREE.CanvasTexture(cv);
@@ -518,7 +511,6 @@ function makeFurNormal(size=256) {
   return tex;
 }
 
-// Cache textures so they're not rebuilt per-mesh
 const _texCache = {};
 function getFurTex(key, baseHex, tipHex, size=256) {
   if (!_texCache[key+'_map'])  _texCache[key+'_map']  = makeFurTexture(baseHex, tipHex, size);
@@ -547,22 +539,25 @@ class PetRenderer {
     this.scene = new THREE.Scene();
 
     this.camera = new THREE.PerspectiveCamera(50, w/h, 0.1, 100);
-    this.camera.position.set(0, mini?0.3:0.5, mini?3.5:4.5);
-    this.camera.lookAt(0, mini?0:0.2, 0);
+    this.camera.position.set(0, mini?0.3:0.4, mini?3.5:4.2);
+    this.camera.lookAt(0, mini?0:0.25, 0);
 
-    // Lights — warm key + cool fill for fur depth
-    const ambient = new THREE.AmbientLight(0xFFF5E8, 0.65);
+    // Освещение: делаем более контрастным, чтобы подчеркнуть пушок
+    const ambient = new THREE.AmbientLight(0xFFF8F0, 0.7);
     this.scene.add(ambient);
-    const key = new THREE.DirectionalLight(0xFFEDD0, 1.1);
+    
+    const key = new THREE.DirectionalLight(0xFFEDD5, 1.2); // Теплый основной свет
     key.position.set(3, 5, 3);
     key.castShadow = true;
     key.shadow.mapSize.set(512,512);
     this.scene.add(key);
-    const fill = new THREE.DirectionalLight(0xC4B5FD, 0.5);
-    fill.position.set(-3, 1, -2);
+    
+    const fill = new THREE.DirectionalLight(0xC7D2FE, 0.55); // Холодный заполняющий сбоку
+    fill.position.set(-3, 1, 2);
     this.scene.add(fill);
-    const rim = new THREE.DirectionalLight(0xFFE4B5, 0.35);
-    rim.position.set(0, -2, -3);
+    
+    const rim = new THREE.DirectionalLight(0xFFFFFF, 0.8); // Мощный контурный свет сзади для эффекта свечения шерсти!
+    rim.position.set(0, 4, -4);
     this.scene.add(rim);
 
     if (!mini) {
@@ -592,28 +587,33 @@ class PetRenderer {
     this.render();
   }
 
-  // ── Material factories ──
-  furMat(key, baseHex, tipHex, normalScale=0.6) {
+  // ── ФИЗИЧЕСКИЙ МАТЕРИАЛ ШЕРСТИ С ЭФФЕКТОМ SHEEN ──
+  furMat(key, baseHex, tipHex, normalScale=0.4) {
     const {map, normalMap} = getFurTex(key, baseHex, tipHex);
-    return new THREE.MeshStandardMaterial({
+    return new THREE.MeshPhysicalMaterial({
       map, normalMap,
       normalScale: new THREE.Vector2(normalScale, normalScale),
-      roughness: 0.92,
+      roughness: 0.88,
       metalness: 0.0,
+      // Sheen создает мягкое бархатистое свечение на изгибах модели, имитируя пушистые волоски
+      sheen: 1.0,
+      sheenColor: new THREE.Color(tipHex), // Подсветка краев цветом кончиков ворса
+      sheenRoughness: 0.6
     });
   }
-  // Smooth mat for nose, eyes, tongue
-  smoothMat(color, roughness=0.3, metalness=0.05) {
+
+  smoothMat(color, roughness=0.2, metalness=0.1) {
     return new THREE.MeshStandardMaterial({color, roughness, metalness});
   }
 
   mesh(geo, mat) {
     const m = new THREE.Mesh(geo, mat);
     m.castShadow = true;
+    m.receiveShadow = true;
     return m;
   }
   furSphere(r, key, baseHex, tipHex, sx=1,sy=1,sz=1) {
-    const m = this.mesh(new THREE.SphereGeometry(r,28,20), this.furMat(key, baseHex, tipHex));
+    const m = this.mesh(new THREE.SphereGeometry(r,32,24), this.furMat(key, baseHex, tipHex));
     m.scale.set(sx,sy,sz); return m;
   }
   furCyl(rt,rb,h, key, baseHex, tipHex, seg=12) {
@@ -632,87 +632,103 @@ class PetRenderer {
     this.parts = {};
     const c = PET_COLORS[this.type];
     if (this.type==='dog') this.buildDog(c);
-    else if (this.type==='cat') this.buildCat(c);
-    else if (this.type==='bunny') this.buildBunny(c);
+    else this.buildCat(c);
     this.buildEyes(c);
-    this.addAccessories();
-    this.group.position.y = -0.2;
+    this.group.position.y = -0.15;
   }
 
   buildDog(c) {
     const p = this.parts;
     const bk = 'dog_body', ek = 'dog_ear', blk = 'dog_belly';
 
-    // Body
-    p.body = this.furSphere(0.62, bk, c.bodyHex, c.earHex, 1, 0.88, 0.88);
+    // Тело
+    p.body = this.furSphere(0.62, bk, c.bodyHex, c.earHex, 1, 0.88, 0.92);
     this.group.add(p.body);
 
-    // Belly — lighter, shorter fur
-    const belly = this.furSphere(0.38, blk, c.bellyHex, c.bodyHex, 1, 0.75, 0.7);
+    // Животик
+    const belly = this.furSphere(0.38, blk, c.bellyHex, c.bodyHex, 1, 0.78, 0.75);
     belly.position.set(0,-0.05,0.35);
     this.group.add(belly);
 
-    // Head
+    // Голова
     p.head = new THREE.Group();
-    p.head.add(this.furSphere(0.45, bk, c.bodyHex, c.earHex, 1.1,1,1.05));
+    p.head.add(this.furSphere(0.46, bk, c.bodyHex, c.earHex, 1.08,1,1.05));
     p.head.position.set(0,0.82,0.1);
     this.group.add(p.head);
 
-    // Snout
+    // Мордочка
     const snout = this.furSphere(0.22, blk, c.bellyHex, c.bodyHex, 1.3,0.85,0.9);
     snout.position.set(0,-0.06,0.38);
     p.head.add(snout);
 
-    // Nose — smooth wet look
+    // Носик (мокрый)
     const nose = this.mesh(
-      new THREE.SphereGeometry(0.1,14,10),
-      new THREE.MeshStandardMaterial({color:c.nose, roughness:0.15, metalness:0.3})
+      new THREE.SphereGeometry(0.09,14,10),
+      new THREE.MeshStandardMaterial({color:c.nose, roughness:0.1, metalness:0.4})
     );
-    nose.scale.set(1.1,0.7,0.9);
-    nose.position.set(0,0.04,0.2);
+    nose.scale.set(1.2,0.7,0.9); nose.position.set(0,0.04,0.2);
     snout.add(nose);
 
-    // Tongue
+    // Язычок
     p.tongue = this.smoothSphere(0.09, c.tongue, 1.1,0.5,0.8);
     p.tongue.position.set(0,-0.14,0.2);
     p.tongue.visible = true;
     snout.add(p.tongue);
 
-    // Floppy ears — fur texture, wider
+    // Висячие ушки
     p.earL = new THREE.Group();
-    p.earL.add(this.furSphere(0.22, ek, c.earHex, c.bodyHex, 0.85,1.35,0.5));
-    p.earL.position.set(-0.35,0.22,-0.08); p.earL.rotation.z=0.4;
+    p.earL.add(this.furSphere(0.22, ek, c.earHex, c.bodyHex, 0.85,1.4,0.5));
+    p.earL.position.set(-0.36,0.22,-0.05); p.earL.rotation.z=0.35;
     p.head.add(p.earL);
 
     p.earR = new THREE.Group();
-    p.earR.add(this.furSphere(0.22, ek, c.earHex, c.bodyHex, 0.85,1.35,0.5));
-    p.earR.position.set(0.35,0.22,-0.08); p.earR.rotation.z=-0.4;
+    p.earR.add(this.furSphere(0.22, ek, c.earHex, c.bodyHex, 0.85,1.4,0.5));
+    p.earR.position.set(0.36,0.22,-0.05); p.earR.rotation.z=-0.35;
     p.head.add(p.earR);
 
-    // Legs
+    // Лапки
     const ly=-0.58, lx=0.30;
     p.legFL = this.buildDogLeg(c); p.legFL.position.set(-lx,ly, 0.28); this.group.add(p.legFL);
     p.legFR = this.buildDogLeg(c); p.legFR.position.set( lx,ly, 0.28); this.group.add(p.legFR);
     p.legBL = this.buildDogLeg(c); p.legBL.position.set(-lx,ly,-0.28); this.group.add(p.legBL);
     p.legBR = this.buildDogLeg(c); p.legBR.position.set( lx,ly,-0.28); this.group.add(p.legBR);
 
-    // Tail
-    p.tail = new THREE.Group();
-    const ts = this.furCyl(0.1,0.12,0.4, ek, c.earHex, c.bellyHex);
-    ts.rotation.z=1.1; ts.position.set(-0.16,0.14,0);
-    p.tail.add(ts);
-    const tt = this.furSphere(0.13, blk, c.bellyHex, '#ffffff');
-    tt.position.set(-0.38,0.34,0);
-    p.tail.add(tt);
-    p.tail.position.set(0,0.1,-0.58);
+    // ── ИЕРАРХИЧЕСКИЙ ЖИВОЙ ХВОСТ СОБАКИ (Многосегментный) ──
+    p.tailSegments = [];
+    let currentJoint = new THREE.Group();
+    p.tail = currentJoint; 
+    p.tail.position.set(0, 0.15, -0.55); // Точка крепления к попе
     this.group.add(p.tail);
+
+    const segCount = 4;
+    for (let i=0; i<segCount; i++) {
+      const h = 0.14;
+      const segGeo = new THREE.CylinderGeometry(0.07 - i*0.015, 0.09 - i*0.015, h, 10);
+      segGeo.translate(0, h/2, 0); // Смещаем pivot в основание сегмента!
+      const segMesh = this.mesh(segGeo, this.furMat(ek, c.earHex, c.bellyHex));
+      
+      currentJoint.add(segMesh);
+      p.tailSegments.push(currentJoint);
+      
+      if (i < segCount - 1) {
+        const nextJoint = new THREE.Group();
+        nextJoint.position.y = h; // Следующий сустав на кончике предыдущего
+        segMesh.add(nextJoint);
+        currentJoint = nextJoint;
+      } else {
+        // Белый пушистый кончик хвоста
+        const tip = this.furSphere(0.1, blk, c.bellyHex, '#ffffff');
+        tip.position.y = h;
+        segMesh.add(tip);
+      }
+    }
   }
 
   buildDogLeg(c) {
     const g = new THREE.Group();
-    const upper = this.furCyl(0.14,0.15,0.32,this.type+'_body',c.bodyHex,c.earHex);
+    const upper = this.furCyl(0.14,0.15,0.32,'dog_body',c.bodyHex,c.earHex);
     upper.position.y=-0.08; g.add(upper);
-    const paw = this.furSphere(0.16,this.type+'_ear',c.earHex,c.bodyHex, 1,0.65,1);
+    const paw = this.furSphere(0.16,'dog_ear',c.earHex,c.bodyHex, 1,0.65,1);
     paw.position.y=-0.28; g.add(paw);
     return g;
   }
@@ -721,31 +737,30 @@ class PetRenderer {
     const p = this.parts;
     const bk='cat_body', ek='cat_ear', blk='cat_belly';
 
-    // Body
-    p.body = this.furSphere(0.56, bk, c.bodyHex, c.earHex, 1,0.95,0.88);
+    // Тело (чуть изящнее)
+    p.body = this.furSphere(0.56, bk, c.bodyHex, c.earHex, 1, 0.98, 0.92);
     this.group.add(p.body);
 
-    const belly = this.furSphere(0.3, blk, c.bellyHex, c.bodyHex, 1,0.75,0.65);
+    const belly = this.furSphere(0.3, blk, c.bellyHex, c.bodyHex, 1, 0.75, 0.7);
     belly.position.set(0,-0.05,0.32);
     this.group.add(belly);
 
-    // Head
+    // Голова
     p.head = new THREE.Group();
-    p.head.add(this.furSphere(0.43, bk, c.bodyHex, c.earHex, 1.05,1,1));
+    p.head.add(this.furSphere(0.43, bk, c.bodyHex, c.earHex, 1.08,0.98,1));
     p.head.position.set(0,0.8,0.08);
     this.group.add(p.head);
 
-    // Snout
+    // Мордочка
     const snout = this.furSphere(0.16, blk, c.bellyHex, c.bodyHex, 1.2,0.85,0.8);
     snout.position.set(0,-0.07,0.38);
     p.head.add(snout);
 
     const nose = this.mesh(
-      new THREE.SphereGeometry(0.07,12,8),
+      new THREE.SphereGeometry(0.06,12,8),
       new THREE.MeshStandardMaterial({color:c.nose, roughness:0.2, metalness:0.2})
     );
-    nose.scale.set(1.1,0.7,0.8);
-    nose.position.set(0,0.03,0.19);
+    nose.scale.set(1.1,0.7,0.8); nose.position.set(0,0.03,0.19);
     snout.add(nose);
 
     p.tongue = this.smoothSphere(0.07, c.tongue, 1,0.5,0.7);
@@ -753,51 +768,67 @@ class PetRenderer {
     p.tongue.visible = false;
     snout.add(p.tongue);
 
-    // Pointed ears — fur cones with inner pink
+    // Ушки торчком (с розовой внутренностью)
     p.earL = new THREE.Group();
-    p.earL.add(this.furCone(0.15,0.30, ek, c.earHex, c.bodyHex, 5));
-    const eliL = this.mesh(new THREE.ConeGeometry(0.09,0.22,5), this.smoothMat(0xFFB6C1, 0.7));
-    eliL.position.y=0.02; p.earL.add(eliL);
-    p.earL.position.set(-0.28,0.34,-0.02); p.earL.rotation.z=0.18;
+    p.earL.add(this.furCone(0.15,0.28, ek, c.earHex, c.bodyHex, 5));
+    const eliL = this.mesh(new THREE.ConeGeometry(0.09,0.20,5), this.smoothMat(0xFFB6C1, 0.6));
+    eliL.position.set(0, 0.02, 0.03); eliL.rotation.y = Math.PI; p.earL.add(eliL);
+    p.earL.position.set(-0.26,0.34,0.02); p.earL.rotation.z=0.2; p.earL.rotation.x=-0.1;
     p.head.add(p.earL);
 
     p.earR = new THREE.Group();
-    p.earR.add(this.furCone(0.15,0.30, ek, c.earHex, c.bodyHex, 5));
-    const eliR = this.mesh(new THREE.ConeGeometry(0.09,0.22,5), this.smoothMat(0xFFB6C1, 0.7));
-    eliR.position.y=0.02; p.earR.add(eliR);
-    p.earR.position.set(0.28,0.34,-0.02); p.earR.rotation.z=-0.18;
+    p.earR.add(this.furCone(0.15,0.28, ek, c.earHex, c.bodyHex, 5));
+    const eliR = this.mesh(new THREE.ConeGeometry(0.09,0.20,5), this.smoothMat(0xFFB6C1, 0.6));
+    eliR.position.set(0, 0.02, 0.03); eliR.rotation.y = Math.PI; p.earR.add(eliR);
+    p.earR.position.set(0.26,0.34,0.02); p.earR.rotation.z=-0.2; p.earR.rotation.x=-0.1;
     p.head.add(p.earR);
 
-    // Whiskers — thin flat boxes
+    // Усики кота
     [-1,1].forEach(side => {
       for (let i=0;i<3;i++) {
-        const w = this.mesh(
-          new THREE.BoxGeometry(0.30,0.012,0.012),
-          this.smoothMat(0x888888, 1.0)
-        );
-        w.position.set(side*0.27, -0.02+i*0.045-0.04, 0.37);
+        const w = this.mesh(new THREE.BoxGeometry(0.32,0.01,0.01), this.smoothMat(0xCCCCCC, 0.9));
+        w.position.set(side*0.26, -0.04+i*0.035, 0.36);
+        w.rotation.z = side * (0.1 - i*0.08);
         p.head.add(w);
       }
     });
 
-    // Legs
+    // Лапки
     const ly=-0.54, lx=0.28;
     p.legFL = this.buildCatLeg(c); p.legFL.position.set(-lx,ly, 0.25); this.group.add(p.legFL);
     p.legFR = this.buildCatLeg(c); p.legFR.position.set( lx,ly, 0.25); this.group.add(p.legFR);
     p.legBL = this.buildCatLeg(c); p.legBL.position.set(-lx,ly,-0.25); this.group.add(p.legBL);
     p.legBR = this.buildCatLeg(c); p.legBR.position.set( lx,ly,-0.25); this.group.add(p.legBR);
 
-    // Tail — tapered cylinder chain
-    p.tail = new THREE.Group();
-    for (let i=0;i<5;i++) {
-      const seg = this.furCyl(0.055-i*0.006, 0.065-i*0.006, 0.22, ek, c.earHex, c.bodyHex);
-      seg.position.y=i*0.18; seg.rotation.z=-0.3-i*0.22; seg.rotation.x=-0.1+i*0.08;
-      p.tail.add(seg);
-    }
-    const tt = this.furSphere(0.11, blk, c.bellyHex, '#ffffff');
-    tt.position.set(-0.46,0.74,0.1); p.tail.add(tt);
-    p.tail.position.set(-0.1,-0.1,-0.55);
+    // ── ИЕРАРХИЧЕСКИЙ ЖИВОЙ ХВОСТ КОШКИ (Длинный, гнущийся волной) ──
+    p.tailSegments = [];
+    let currentJoint = new THREE.Group();
+    p.tail = currentJoint;
+    p.tail.position.set(0, 0.08, -0.52); // У попы котика
     this.group.add(p.tail);
+
+    const segCount = 6; // Больше сегментов для кошачьей пластики
+    for (let i=0; i<segCount; i++) {
+      const h = 0.16;
+      const segGeo = new THREE.CylinderGeometry(0.048 - i*0.006, 0.058 - i*0.006, h, 10);
+      segGeo.translate(0, h/2, 0); // Точка вращения строго в основании цилиндра!
+      const segMesh = this.mesh(segGeo, this.furMat(ek, c.earHex, c.bodyHex));
+      
+      currentJoint.add(segMesh);
+      p.tailSegments.push(currentJoint);
+      
+      if (i < segCount - 1) {
+        const nextJoint = new THREE.Group();
+        nextJoint.position.y = h;
+        segMesh.add(nextJoint);
+        currentJoint = nextJoint;
+      } else {
+        // Закругленный пушистый кончик кошачьего хвоста
+        const tip = this.furSphere(0.07, blk, c.bellyHex, '#ffffff');
+        tip.position.y = h;
+        segMesh.add(tip);
+      }
+    }
   }
 
   buildCatLeg(c) {
@@ -809,161 +840,52 @@ class PetRenderer {
     return g;
   }
 
-  buildBunny(c) {
-    const p = this.parts;
-    const bk = 'bunny_body', ek = 'bunny_ear', blk = 'bunny_belly';
-
-    // Body
-    p.body = this.furSphere(0.55, bk, c.bodyHex, c.earHex, 1, 0.9, 0.9);
-    this.group.add(p.body);
-
-    const belly = this.furSphere(0.32, blk, c.bellyHex, c.bodyHex, 1, 0.8, 0.7);
-    belly.position.set(0, -0.05, 0.3);
-    this.group.add(belly);
-
-    // Head
-    p.head = new THREE.Group();
-    p.head.add(this.furSphere(0.4, bk, c.bodyHex, c.earHex, 1.05, 1, 1));
-    p.head.position.set(0, 0.76, 0.05);
-    this.group.add(p.head);
-
-    // Snout
-    const snout = this.furSphere(0.15, blk, c.bellyHex, c.bodyHex, 1.3, 0.8, 0.8);
-    snout.position.set(0, -0.08, 0.32);
-    p.head.add(snout);
-
-    const nose = this.smoothSphere(0.05, c.noseHex);
-    nose.position.set(0, 0.02, 0.16);
-    snout.add(nose);
-
-    // Long ears
-    p.earL = new THREE.Group();
-    p.earL.add(this.furSphere(0.12, ek, c.bodyHex, c.earHex, 0.6, 2.6, 0.4));
-    p.earL.position.set(-0.16, 0.35, -0.05);
-    p.earL.rotation.z = 0.08;
-    p.head.add(p.earL);
-
-    p.earR = new THREE.Group();
-    p.earR.add(this.furSphere(0.12, ek, c.bodyHex, c.earHex, 0.6, 2.6, 0.4));
-    p.earR.position.set(0.16, 0.35, -0.05);
-    p.earR.rotation.z = -0.08;
-    p.head.add(p.earR);
-
-    // Legs
-    const ly = -0.52, lx = 0.25;
-    p.legFL = this.buildDogLeg(c); p.legFL.position.set(-lx, ly, 0.22); this.group.add(p.legFL);
-    p.legFR = this.buildDogLeg(c); p.legFR.position.set( lx, ly, 0.22); this.group.add(p.legFR);
-    p.legBL = this.buildDogLeg(c); p.legBL.position.set(-lx, ly, -0.22); this.group.add(p.legBL);
-    p.legBR = this.buildDogLeg(c); p.legBR.position.set( lx, ly, -0.22); this.group.add(p.legBR);
-
-    // Pompon Tail
-    p.tail = this.furSphere(0.14, blk, c.bellyHex, '#ffffff');
-    p.tail.position.set(0, -0.1, -0.52);
-    this.group.add(p.tail);
-  }
-
-  addAccessories() {
-    if (this.mini || !state.equippedAcc) return;
-    const accId = state.equippedAcc;
-    const p = this.parts;
-    if (!p.head) return;
-
-    // 👑 Crown
-    if (accId === 'crown') {
-      const crown = new THREE.Group();
-      const gold = this.smoothMat(0xFBBF24, 0.2, 0.8);
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.06, 16), gold);
-      crown.add(base);
-      
-      for(let i=0; i<5; i++) {
-        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.09, 4), gold);
-        const angle = (i / 5) * Math.PI * 2;
-        spike.position.set(Math.cos(angle)*0.14, 0.05, Math.sin(angle)*0.14);
-        spike.rotation.x = Math.sin(angle)*0.2;
-        spike.rotation.z = -Math.cos(angle)*0.2;
-        crown.add(spike);
-      }
-      crown.position.set(0, 0.42, -0.05);
-      p.head.add(crown);
-    }
-
-    // 🎀 Bow
-    if (accId === 'bow') {
-      const bow = new THREE.Group();
-      const pink = this.smoothMat(0xF472B6, 0.4);
-      const wingL = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.14, 4), pink);
-      wingL.rotation.z = Math.PI/2; wingL.position.x = -0.07;
-      const wingR = wingL.clone(); wingR.rotation.z = -Math.PI/2; wingR.position.x = 0.07;
-      const center = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), pink);
-      bow.add(wingL, wingR, center);
-      
-      if (this.type === 'cat') bow.position.set(-0.22, 0.28, 0.15);
-      else bow.position.set(0, -0.32, 0.35);
-      p.head.add(bow);
-    }
-
-    // 🕶️ Glasses
-    if (accId === 'glasses') {
-      const glasses = new THREE.Group();
-      const dark = this.smoothMat(0x1F2937, 0.1, 0.9);
-      const frameL = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.012, 4, 12), dark);
-      frameL.position.x = -0.15;
-      const frameR = frameL.clone(); frameR.position.x = 0.15;
-      const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.015, 0.01), dark);
-      glasses.add(frameL, frameR, bridge);
-      
-      glasses.position.set(0, 0.08, 0.41);
-      p.head.add(glasses);
-    }
-  }
-
   buildEyes(c) {
     const p = this.parts;
-    const eyeX = this.type==='dog' ? 0.16 : this.type==='cat' ? 0.15 : 0.14;
-    const eyeY = 0.1, eyeZ = this.type==='bunny'? 0.34 : 0.38;
+    const eyeX = this.type==='dog' ? 0.16 : 0.15;
+    const eyeY = 0.1, eyeZ = 0.38;
 
-    // Whites
+    // Белки глаз
     const ewL = this.smoothSphere(0.1, 0xFFFFFF, 1,1.15,0.5);
     ewL.position.set(-eyeX,eyeY,eyeZ); p.head.add(ewL);
     const ewR = this.smoothSphere(0.1, 0xFFFFFF, 1,1.15,0.5);
     ewR.position.set(eyeX,eyeY,eyeZ); p.head.add(ewR);
 
-    // Iris — coloured
-    const irisColor = this.type==='dog' ? 0x7B4F2E : this.type==='cat' ? 0x4CAF50 : 0xEF4444;
-    const irisL = this.smoothSphere(0.072, irisColor, 1, this.type==='cat'?1.7:1.2, 0.55);
+    // Радужка (у кота — вертикальная и яркая, зеленый неон)
+    const irisColor = this.type==='dog' ? 0x7B4F2E : 0x00E676;
+    const irisL = this.smoothSphere(0.075, irisColor, 1, this.type==='cat'?1.5:1.2, 0.55);
     irisL.position.set(-eyeX,eyeY,eyeZ+0.02); p.head.add(irisL);
-    const irisR = this.smoothSphere(0.072, irisColor, 1, this.type==='cat'?1.7:1.2, 0.55);
+    const irisR = this.smoothSphere(0.075, irisColor, 1, this.type==='cat'?1.5:1.2, 0.55);
     irisR.position.set(eyeX,eyeY,eyeZ+0.02); p.head.add(irisR);
 
-    // Pupil
+    // Зрачки
     p.eyeL = this.mesh(
       new THREE.SphereGeometry(0.05,10,8),
-      new THREE.MeshStandardMaterial({color:c.eye, roughness:0.1, metalness:0.3})
+      new THREE.MeshStandardMaterial({color:c.eye, roughness:0.05, metalness:0.2})
     );
-    p.eyeL.scale.set(1, this.type==='cat'?2.0:1.3, 0.5);
+    p.eyeL.scale.set(1, this.type==='cat'?2.2:1.3, 0.5);
     p.eyeL.position.set(-eyeX,eyeY,eyeZ+0.045); p.head.add(p.eyeL);
     p.eyeR = p.eyeL.clone();
     p.eyeR.position.set(eyeX,eyeY,eyeZ+0.045); p.head.add(p.eyeR);
 
-    // Specular shine
+    // Блики (для живого взгляда)
     const shineMat = new THREE.MeshBasicMaterial({color:0xFFFFFF});
-    const shL = this.mesh(new THREE.SphereGeometry(0.024,6,6), shineMat);
-    shL.position.set(-eyeX+0.028,eyeY+0.03,eyeZ+0.075); p.head.add(shL);
+    const shL = this.mesh(new THREE.SphereGeometry(0.025,6,6), shineMat);
+    shL.position.set(-eyeX+0.025,eyeY+0.03,eyeZ+0.072); p.head.add(shL);
     const shR = shL.clone();
-    shR.position.set(eyeX+0.028,eyeY+0.03,eyeZ+0.075); p.head.add(shR);
+    shR.position.set(eyeX+0.025,eyeY+0.03,eyeZ+0.072); p.head.add(shR);
 
-    // Blink lids
-    const lidMat = this.furMat('lid_'+this.type, PET_COLORS[this.type].bodyHex, PET_COLORS[this.type].earHex, 0.3);
-    p.lidL = this.mesh(new THREE.SphereGeometry(0.1,20,14), lidMat);
-    p.lidL.scale.set(1,1.15,0.5); p.lidL.scale.y=0;
+    // Веки для моргания
+    const lidMat = this.furMat('lid_'+this.type, PET_COLORS[this.type].bodyHex, PET_COLORS[this.type].earHex, 0.2);
+    p.lidL = this.mesh(new THREE.SphereGeometry(0.102,20,14), lidMat);
+    p.lidL.scale.set(1,1.16,0.55); p.lidL.scale.y=0;
     p.lidL.position.copy(ewL.position); p.head.add(p.lidL);
     p.lidR = p.lidL.clone();
     p.lidR.position.copy(ewR.position); p.head.add(p.lidR);
   }
 
-  // ── ANIMATION TRIGGERS ──
   playAnim(name) {
-    const durations = {idle:0, feed:1.5, play:2, bath:2, sleep:3, happy:1, sad:1};
+    const durations = {idle:0, feed:1.5, play:2, bath:2, sleep:3, happy:1, sad:1.5};
     this.anim = name;
     this.animTime = 0;
     this.animDuration = durations[name] || 1.5;
@@ -980,63 +902,79 @@ class PetRenderer {
     const done = this.animTime > this.animDuration;
     const a = this.anim;
 
-    // ── IDLE: gentle breathe + tail wag ──
-    if (a === 'idle') {
-      const breath = Math.sin(t*1.4)*0.028;
-      p.body.scale.y = 0.88 + breath;
-      p.body.scale.x = 1 - breath*0.3;
-      if (p.head) p.head.position.y = (this.type==='bunny'?0.76:0.82) + breath*0.6;
-      // tail wag
-      if (p.tail && this.type!=='bunny') p.tail.rotation.z = Math.sin(t*3.5)*0.35;
-      // bunny ear bounce
-      if (p.earL && this.type === 'bunny') {
-        p.earL.rotation.x = Math.sin(t * 2) * 0.05;
-        p.earR.rotation.x = Math.sin(t * 2) * 0.05;
-      }
-      // ear droop (dog)
-      if (p.earL && this.type==='dog') {
-        p.earL.rotation.z = 0.35 + Math.sin(t*1.2)*0.06;
-        p.earR.rotation.z = -0.35 - Math.sin(t*1.2)*0.06;
-      }
-      // slight head bob
-      if (p.head) p.head.rotation.z = Math.sin(t*0.8)*0.04;
+    // ── ПРОЦЕДУРНАЯ АНИМАЦИЯ ХВОСТА (Накатывающая волна синуса) ──
+    if (p.tailSegments && p.tailSegments.length > 0) {
+      let waveSpeed = 4.0;
+      let waveAmp = 0.14;
+      
+      // Меняем интенсивность и скорость виляния хвостом в зависимости от стейта
+      if (a === 'feed') { waveSpeed = 14.0; waveAmp = 0.28; }
+      else if (a === 'play') { waveSpeed = 18.0; waveAmp = 0.38; }
+      else if (a === 'bath') { waveSpeed = 10.0; waveAmp = 0.22; }
+      else if (a === 'sleep') { waveSpeed = 1.2; waveAmp = 0.03; }
+      else if (a === 'sad' || state.happy < 25) { waveSpeed = 1.8; waveAmp = 0.05; } // Почти не виляет, если грустно
+
+      p.tailSegments.forEach((joint, index) => {
+        // Главный секрет — задержка фазы синуса на основе индекса сустава (index * 0.45)
+        joint.rotation.z = Math.sin(t * waveSpeed - index * 0.45) * waveAmp;
+        
+        // Базовый наклон хвоста (Кот держит хвост пистолетом вверх, собака ниже)
+        const baseAngleX = this.type === 'cat' ? (Math.PI / 2.5) : (Math.PI / 4.5);
+        
+        // Небольшое 3D-покачивание вверх-вниз для реалистичного объема движения
+        joint.rotation.x = baseAngleX + Math.cos(t * (waveSpeed * 0.5) - index * 0.3) * (waveAmp * 0.4);
+      });
     }
 
-    // ── FEED: happy bounce, tongue out ──
+    // ── ДЫХАНИЕ И ДВИЖЕНИЯ ТЕЛА ──
+    if (a === 'idle') {
+      const breath = Math.sin(t*1.5)*0.025;
+      p.body.scale.y = 0.98 + breath;
+      p.body.scale.x = 1 - breath*0.3;
+      if (p.head) p.head.position.y = 0.8 + breath * 0.5;
+      if (p.head) p.head.rotation.z = Math.sin(t*0.7)*0.03; // Легкий наклон головы
+      
+      // Ушки собаки мягко покачиваются при дыхании
+      if (p.earL && this.type==='dog') {
+        p.earL.rotation.z = 0.35 + Math.sin(t*1.5)*0.04;
+        p.earR.rotation.z = -0.35 - Math.sin(t*1.5)*0.04;
+      }
+    }
+
+    // ── АНИМАЦИЯ: КОРМЛЕНИЕ ──
     else if (a === 'feed') {
       const prog = this.animTime / this.animDuration;
-      const bounce = Math.abs(Math.sin(prog*Math.PI*4)) * 0.18 * (1-prog);
-      if (p.head) p.head.position.y = (this.type==='bunny'?0.76:0.82) + bounce;
-      p.body.position.y = bounce*0.4;
-      if (p.tongue) p.tongue.visible = true;
-      if (p.tail && this.type!=='bunny') p.tail.rotation.z = Math.sin(t*8)*0.6;
+      const bounce = Math.abs(Math.sin(prog*Math.PI*4)) * 0.15 * (1-prog);
+      if (p.head) p.head.position.y = 0.8 + bounce;
+      p.body.position.y = bounce*0.3;
+      if (p.tongue) p.tongue.visible = true; // Облизывается
       if (done) { if (p.tongue) p.tongue.visible = (this.type==='dog'); this.playAnim('idle'); }
     }
 
-    // ── PLAY: jump + spin ──
+    // ── АНИМАЦИЯ: ИГРА (Прыжок на 360°) ──
     else if (a === 'play') {
       const prog = this.animTime / this.animDuration;
-      const jumpH = Math.sin(prog*Math.PI*3)*0.4 * (1-prog*0.5);
-      this.group.position.y = -0.2 + jumpH;
-      this.group.rotation.y += dt * 4;
-      if (p.tail && this.type!=='bunny') p.tail.rotation.z = Math.sin(t*10)*0.8;
-      if (done) { this.group.position.y=-0.2; this.playAnim('idle'); }
+      const jumpH = Math.sin(prog*Math.PI)*0.5 * (1-prog*0.2);
+      this.group.position.y = -0.15 + jumpH;
+      this.group.rotation.y += dt * 5; // Крутится юлой
+      if (done) { this.group.position.y=-0.15; this.playAnim('idle'); }
     }
 
-    // ── BATH: shake water off ──
+    // ── АНИМАЦИЯ: КУПАНИЕ (Отряхивается влево-вправо) ──
     else if (a === 'bath') {
-      const shake = Math.sin(this.animTime*25)*0.12 * Math.max(0, 1-this.animTime/this.animDuration);
+      const shake = Math.sin(this.animTime*28)*0.14 * Math.max(0, 1-this.animTime/this.animDuration);
       this.group.rotation.z = shake;
-      if (p.head) p.head.rotation.z = shake*1.5;
+      if (p.head) p.head.rotation.z = shake*1.4;
       if (done) { this.group.rotation.z=0; if(p.head)p.head.rotation.z=0; this.playAnim('idle'); }
     }
 
-    // ── SLEEP: slow lean + zzz scale ──
+    // ── АНИМАЦИЯ: СОН (Заваливается набок и закрывает глаза) ──
     else if (a === 'sleep') {
       const prog = this.animTime / this.animDuration;
-      this.group.rotation.z = THREE.MathUtils.lerp(0, -0.5, Math.min(1, prog*2));
-      p.body.scale.y = 0.88 + Math.sin(prog*Math.PI*2)*0.06;
-      if (p.eyeL) { p.eyeL.scale.y = Math.max(0.05, 1-prog*3); p.eyeR.scale.y = p.eyeL.scale.y; }
+      const angle = THREE.MathUtils.lerp(0, -0.4, Math.min(1, prog*2.5));
+      this.group.rotation.z = angle;
+      p.body.scale.y = 0.98 + Math.sin(prog*Math.PI*3)*0.05; // Мерное глубокое дыхание
+      if (p.eyeL) { p.eyeL.scale.y = Math.max(0.05, 1-prog*4); p.eyeR.scale.y = p.eyeL.scale.y; }
       if (done) {
         this.group.rotation.z=0;
         if(p.eyeL){p.eyeL.scale.y=1;p.eyeR.scale.y=1;}
@@ -1044,28 +982,28 @@ class PetRenderer {
       }
     }
 
-    // ── SAD: droop ──
+    // ── АНИМАЦИЯ: ГРУСТЬ (Опускает голову вниз) ──
     else if (a === 'sad') {
-      this.group.rotation.z = Math.sin(this.animTime*1.5)*0.06;
-      if (p.head) p.head.rotation.x = Math.min(0.25, this.animTime*0.5);
-      if (done) { this.group.rotation.z=0; if(p.head)p.head.rotation.x=0; this.playAnim('idle'); }
+      const prog = this.animTime / this.animDuration;
+      if (p.head) p.head.rotation.x = THREE.MathUtils.lerp(0, 0.22, Math.sin(prog*Math.PI));
+      if (done) { if(p.head) p.head.rotation.x=0; this.playAnim('idle'); }
     }
 
-    // ── BLINK logic ──
+    // ── ЛОГИКА МОРГАНИЯ ГЛАЗ ──
     this.blinkTimer += dt;
-    if (!this.isBlinking && this.blinkTimer > 3 + Math.random()*2) {
+    if (!this.isBlinking && this.blinkTimer > 2.5 + Math.random()*3) {
       this.isBlinking = true; this.blinkTimer = 0;
     }
     if (this.isBlinking) {
-      const bprog = this.blinkTimer / 0.18;
+      const bprog = this.blinkTimer / 0.16;
       const sc = bprog < 0.5 ? bprog*2 : 2-bprog*2;
-      if (p.lidL) { p.lidL.scale.y = Math.min(1.2, sc*1.4); p.lidR.scale.y = p.lidL.scale.y; }
+      if (p.lidL) { p.lidL.scale.y = Math.min(1.2, sc*1.3); p.lidR.scale.y = p.lidL.scale.y; }
       if (bprog >= 1) { this.isBlinking=false; if(p.lidL){p.lidL.scale.y=0;p.lidR.scale.y=0;} }
     }
 
-    // auto-rotate (idle only, slow)
+    // Плавное медленное вращение питомца на подиуме в режиме ожидания
     if (a === 'idle' && !this._drag) {
-      this.group.rotation.y += dt * 0.25;
+      this.group.rotation.y += dt * 0.22;
     }
 
     this.renderer.render(this.scene, this.camera);
